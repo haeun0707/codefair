@@ -506,6 +506,30 @@ def _render_results(case: dict[str, Any], analyzed: list[dict[str, Any]], max_sp
         )
         return
 
+    st.markdown("**제보별 단서 비교 그래프**")
+    st.caption(
+        "단서 유사도는 사진과 관찰 특징이 닮은 정도이며 동일 동물일 확률이 아닙니다. "
+        "분석 신뢰도가 낮거나 동물이 가려진 제보는 그래프 값과 관계없이 판단 보류될 수 있습니다."
+    )
+    chart_rows = [
+        {
+            "제보": f"{rank}순위 · {item['report_id']}",
+            "단서 유사도(%)": round(item["assessment"].clue_similarity * 100),
+            "검토 우선도(점)": item["assessment"].priority,
+            "분석 신뢰도(%)": round(item["assessment"].reliability * 100),
+        }
+        for rank, item in enumerate(analyzed, start=1)
+    ]
+    st.bar_chart(
+        chart_rows,
+        x="제보",
+        y=["단서 유사도(%)", "검토 우선도(점)", "분석 신뢰도(%)"],
+        y_label="점수 (0~100)",
+        sort=False,
+        stack=False,
+        height=320,
+    )
+
     confirmed_reports: list[dict[str, Any]] = []
     for rank, item in enumerate(analyzed, start=1):
         assessment = item["assessment"]
@@ -533,10 +557,10 @@ def _render_results(case: dict[str, Any], analyzed: list[dict[str, Any]], max_sp
                 )
                 st.write(f"**촬영:** {observed_text} · **위치:** {location_text}")
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("사진 단서", f"{assessment.image_similarity * 100:.0f}/100")
-                m2.metric("분석 신뢰도", f"{assessment.reliability * 100:.0f}/100")
-                m3.metric("선명도", f"{item['quality'].sharpness:.1f}")
-                m4.metric("밝기", f"{item['quality'].brightness:.1f}")
+                m1.metric("단서 유사도", f"{assessment.clue_similarity * 100:.0f}%")
+                m2.metric("사진 유사도", f"{assessment.image_similarity * 100:.0f}%")
+                m3.metric("분석 신뢰도", f"{assessment.reliability * 100:.0f}%")
+                m4.metric("선명도", f"{item['quality'].sharpness:.1f}")
                 st.progress(assessment.priority)
 
             st.markdown("**일치·불일치 근거**")

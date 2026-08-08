@@ -71,6 +71,38 @@ def test_multiple_trait_mismatches_lower_priority() -> None:
     assert sum(item.status == "불일치" for item in assessment.evidence) >= 2
 
 
+def test_clue_similarity_combines_photo_and_observed_traits() -> None:
+    image = create_demo_pet_image("target")
+    signature = extract_image_signature(image)
+    quality = measure_image_quality(image)
+    mismatched_traits = PetTraits(
+        "강아지", ("회색",), "무늬 없음", "양쪽 귀가 섬", "마름", "아래로 긴 꼬리"
+    )
+
+    matched = assess_sighting(
+        "matched",
+        signature,
+        signature,
+        REFERENCE_TRAITS,
+        REFERENCE_TRAITS,
+        quality,
+        "전체가 잘 보임",
+    )
+    mismatched = assess_sighting(
+        "mismatched",
+        signature,
+        signature,
+        REFERENCE_TRAITS,
+        mismatched_traits,
+        quality,
+        "전체가 잘 보임",
+    )
+
+    assert matched.image_similarity == mismatched.image_similarity
+    assert matched.clue_similarity > mismatched.clue_similarity
+    assert 0.0 <= mismatched.clue_similarity <= 1.0
+
+
 def test_impossible_movement_is_not_treated_as_match_confirmation() -> None:
     image = create_demo_pet_image("target")
     signature = extract_image_signature(image)

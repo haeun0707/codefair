@@ -69,6 +69,7 @@ class MatchAssessment:
     priority: int
     decision: str
     image_similarity: float
+    clue_similarity: float
     reliability: float
     evidence: tuple[EvidenceItem, ...]
     requests: tuple[str, ...]

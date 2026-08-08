@@ -88,7 +88,8 @@ def assess_sighting(
     else:
         combined = similarities["overall"]
 
-    priority = round(combined * 100 * (0.78 + 0.22 * reliability))
+    clue_similarity = float(max(0.0, min(1.0, combined)))
+    priority = round(clue_similarity * 100 * (0.78 + 0.22 * reliability))
     if movement is not None and movement.feasible is True:
         priority = min(100, priority + 4)
     elif movement is not None and movement.feasible is False:
@@ -127,6 +128,7 @@ def assess_sighting(
         priority=int(max(0, min(100, priority))),
         decision=decision,
         image_similarity=similarities["overall"],
+        clue_similarity=clue_similarity,
         reliability=float(max(0.0, min(1.0, reliability))),
         evidence=tuple(evidence),
         requests=tuple(dict.fromkeys(requests)),
