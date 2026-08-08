@@ -6,6 +6,9 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+.node-portable/
+.tools/
+web/
 
 # Streamlit and local configuration
 .streamlit/secrets.toml
@@ -30,4 +33,3 @@ inputs/
 .vscode/
 .DS_Store
 Thumbs.db
-
