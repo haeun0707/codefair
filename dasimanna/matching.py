@@ -65,13 +65,13 @@ def assess_sighting(
     )
     if should_hold:
         hold_detail = (
-            "사진이 흐리거나 동물이 충분히 보이지 않아 이 사진 단서는 비교하지 않았습니다. "
-            "더 가까운 사진이나 다른 각도의 사진이 필요합니다."
+            "사진이 흐리거나 동물이 충분히 보이지 않아 일치·불일치 판단은 보류했습니다. "
+            "점수는 참고 측정값이며 더 가까운 사진이나 다른 각도의 사진이 필요합니다."
         )
         evidence: list[EvidenceItem] = [
-            EvidenceItem("사진 색 분포", "확인 불가", hold_detail, None),
-            EvidenceItem("윤곽·질감", "확인 불가", hold_detail, None),
-            EvidenceItem("저해상도 시각 패턴", "확인 불가", hold_detail, None),
+            EvidenceItem("사진 색 분포", "확인 불가", hold_detail, similarities["color"]),
+            EvidenceItem("윤곽·질감", "확인 불가", hold_detail, similarities["texture"]),
+            EvidenceItem("저해상도 시각 패턴", "확인 불가", hold_detail, similarities["visual"]),
         ]
     else:
         evidence = [

@@ -511,21 +511,13 @@ def _render_results(case: dict[str, Any], analyzed: list[dict[str, Any]], max_sp
     st.markdown("**제보별 단서 비교 그래프**")
     st.caption(
         "단서 유사도는 사진과 관찰 특징이 닮은 정도이며 동일 동물일 확률이 아닙니다. "
-        "판단 보류 제보는 무리하게 비교하지 않도록 유사도와 검토 우선도 막대를 표시하지 않습니다."
+        "판단 보류 제보도 참고 측정값은 숫자로 표시하지만 동일 여부는 판단하지 않습니다."
     )
     chart_rows = [
         {
             "제보": f"{rank}순위 · {item['report_id']}",
-            "단서 유사도(%)": (
-                None
-                if item["assessment"].decision == "판단 보류"
-                else round(item["assessment"].clue_similarity * 100)
-            ),
-            "검토 우선도(점)": (
-                None
-                if item["assessment"].decision == "판단 보류"
-                else item["assessment"].priority
-            ),
+            "단서 유사도(%)": round(item["assessment"].clue_similarity * 100),
+            "검토 우선도(점)": item["assessment"].priority,
             "분석 신뢰도(%)": round(item["assessment"].reliability * 100),
         }
         for rank, item in enumerate(analyzed, start=1)
@@ -567,16 +559,16 @@ def _render_results(case: dict[str, Any], analyzed: list[dict[str, Any]], max_sp
                 )
                 st.write(f"**촬영:** {observed_text} · **위치:** {location_text}")
                 m1, m2, m3, m4 = st.columns(4)
-                if assessment.decision == "판단 보류":
-                    m1.metric("단서 유사도", "판단 보류")
-                    m2.metric("사진 유사도", "확인 불가")
-                else:
-                    m1.metric("단서 유사도", f"{assessment.clue_similarity * 100:.0f}%")
-                    m2.metric("사진 유사도", f"{assessment.image_similarity * 100:.0f}%")
+                m1.metric("단서 유사도", f"{assessment.clue_similarity * 100:.0f}%")
+                m2.metric("사진 유사도", f"{assessment.image_similarity * 100:.0f}%")
                 m3.metric("분석 신뢰도", f"{assessment.reliability * 100:.0f}%")
                 m4.metric("선명도", f"{item['quality'].sharpness:.1f}")
-                if assessment.decision != "판단 보류":
-                    st.progress(assessment.priority)
+                st.progress(assessment.priority)
+                if assessment.decision == "판단 보류":
+                    st.caption(
+                        "위 퍼센트와 점수는 참고 측정값입니다. 사진 정보가 부족하므로 "
+                        "동일 동물 여부는 판단하지 않습니다."
+                    )
 
             st.markdown("**일치·불일치 근거**")
             st.dataframe(

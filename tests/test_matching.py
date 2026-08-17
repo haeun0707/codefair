@@ -49,7 +49,7 @@ def test_low_quality_forces_hold_even_when_traits_match() -> None:
     assert assessment.decision == "판단 보류"
     assert assessment.requests
     assert all(
-        item.status == "확인 불가" and item.score is None
+        item.status == "확인 불가" and item.score is not None
         for item in assessment.evidence
         if item.category in {"사진 색 분포", "윤곽·질감", "저해상도 시각 패턴"}
     )
@@ -189,7 +189,7 @@ def test_blurry_pet_is_held_and_requests_closer_photo() -> None:
     assert assessment.decision == "판단 보류"
     assert any("더 가까운 사진" in request for request in assessment.requests)
     assert all(
-        item.status == "확인 불가" and item.score is None
+        item.status == "확인 불가" and item.score is not None
         for item in assessment.evidence
         if item.category in {"사진 색 분포", "윤곽·질감", "저해상도 시각 패턴"}
     )

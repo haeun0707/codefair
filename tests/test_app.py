@@ -18,11 +18,11 @@ def test_demo_completes_review_flow_without_auto_confirmation() -> None:
     assert all(not checkbox.value for checkbox in app.checkbox)
     assert len(app.metric) >= 20
     assert any("검토 우선도는 동일 동물일 확률이 아닙니다" in item.value for item in app.markdown)
-    assert any(metric.label == "단서 유사도" and metric.value.endswith("%") for metric in app.metric)
-    assert any(
-        metric.label == "단서 유사도" and metric.value == "판단 보류" for metric in app.metric
-    )
-    assert any("판단 보류 제보는 무리하게 비교하지 않도록" in item.value for item in app.caption)
+    clue_metrics = [metric for metric in app.metric if metric.label == "단서 유사도"]
+    assert clue_metrics
+    assert all(metric.value.endswith("%") for metric in clue_metrics)
+    assert any("판단 보류 제보도 참고 측정값은 숫자로 표시" in item.value for item in app.caption)
+    assert any("동일 동물 여부는 판단하지 않습니다" in item.value for item in app.caption)
     assert len(app.get("vega_lite_chart")) == 1
     assert any("원본을 확인한 제보" in message.value for message in app.info)
 
