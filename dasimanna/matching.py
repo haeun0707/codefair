@@ -36,6 +36,9 @@ TRAIT_WEIGHTS = {
     "body_shape": 0.12,
     "tail_shape": 0.16,
 }
+MIN_SHARPNESS_FOR_REVIEW = 60.0
+MIN_RELIABILITY_FOR_REVIEW = 0.40
+LIMITED_VISIBILITY = {"일부만 보임", "거의 보이지 않음"}
 
 
 def assess_sighting(
@@ -55,11 +58,27 @@ def assess_sighting(
 
     similarities = compare_signatures(reference_signature, candidate_signature)
     reliability = image_quality.reliability * VISIBILITY_FACTORS[visibility]
-    evidence: list[EvidenceItem] = [
-        _image_evidence("사진 색 분포", similarities["color"], 0.66),
-        _image_evidence("윤곽·질감", similarities["texture"], 0.58),
-        _image_evidence("저해상도 시각 패턴", similarities["visual"], 0.62),
-    ]
+    should_hold = (
+        reliability < MIN_RELIABILITY_FOR_REVIEW
+        or image_quality.sharpness < MIN_SHARPNESS_FOR_REVIEW
+        or visibility in LIMITED_VISIBILITY
+    )
+    if should_hold:
+        hold_detail = (
+            "사진이 흐리거나 동물이 충분히 보이지 않아 이 사진 단서는 비교하지 않았습니다. "
+            "더 가까운 사진이나 다른 각도의 사진이 필요합니다."
+        )
+        evidence: list[EvidenceItem] = [
+            EvidenceItem("사진 색 분포", "확인 불가", hold_detail, None),
+            EvidenceItem("윤곽·질감", "확인 불가", hold_detail, None),
+            EvidenceItem("저해상도 시각 패턴", "확인 불가", hold_detail, None),
+        ]
+    else:
+        evidence = [
+            _image_evidence("사진 색 분포", similarities["color"], 0.66),
+            _image_evidence("윤곽·질감", similarities["texture"], 0.58),
+            _image_evidence("저해상도 시각 패턴", similarities["visual"], 0.62),
+        ]
 
     trait_scores: list[tuple[float, float]] = []
     mismatch_count = 0
@@ -97,21 +116,16 @@ def assess_sighting(
         priority = max(0, priority - 10)
 
     requests: list[str] = []
-    if image_quality.sharpness < 35:
+    if image_quality.sharpness < MIN_SHARPNESS_FOR_REVIEW:
         requests.append("흔들림이 적고 더 가까운 사진을 요청하세요.")
     if image_quality.brightness < 35 or image_quality.brightness > 225:
         requests.append("밝기가 다른 장소나 각도에서 다시 촬영해 달라고 요청하세요.")
-    if visibility in {"일부만 보임", "거의 보이지 않음"}:
+    if visibility in LIMITED_VISIBILITY:
         requests.append("얼굴·귀·꼬리가 보이는 다른 각도의 사진을 요청하세요.")
     known_trait_count = len(trait_scores)
     if known_trait_count < 3:
         requests.append("털 색 외에 얼굴 무늬·귀·꼬리 특징을 추가로 확인하세요.")
 
-    should_hold = (
-        reliability < 0.32
-        or image_quality.sharpness < 35
-        or visibility in {"일부만 보임", "거의 보이지 않음"}
-    )
     if should_hold:
         decision = "판단 보류"
     elif movement is not None and movement.feasible is False:

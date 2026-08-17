@@ -470,13 +470,15 @@ def _analyze_case(case: dict[str, Any], max_speed_kmh: float) -> list[dict[str, 
 
 
 def _render_decision(decision: str, priority: int) -> None:
+    if decision == "판단 보류":
+        st.info("판단 보류 · 사진 정보가 부족하여 동일 여부를 비교하지 않음")
+        return
+
     message = f"{decision} · 검토 우선도 {priority}/100"
     if decision == "우선 확인":
         st.success(message)
     elif decision in {"추가 확인", "이동 경로 재확인"}:
         st.warning(message)
-    elif decision == "판단 보류":
-        st.info(message)
     else:
         st.error(message)
 
@@ -509,13 +511,21 @@ def _render_results(case: dict[str, Any], analyzed: list[dict[str, Any]], max_sp
     st.markdown("**제보별 단서 비교 그래프**")
     st.caption(
         "단서 유사도는 사진과 관찰 특징이 닮은 정도이며 동일 동물일 확률이 아닙니다. "
-        "분석 신뢰도가 낮거나 동물이 가려진 제보는 그래프 값과 관계없이 판단 보류될 수 있습니다."
+        "판단 보류 제보는 무리하게 비교하지 않도록 유사도와 검토 우선도 막대를 표시하지 않습니다."
     )
     chart_rows = [
         {
             "제보": f"{rank}순위 · {item['report_id']}",
-            "단서 유사도(%)": round(item["assessment"].clue_similarity * 100),
-            "검토 우선도(점)": item["assessment"].priority,
+            "단서 유사도(%)": (
+                None
+                if item["assessment"].decision == "판단 보류"
+                else round(item["assessment"].clue_similarity * 100)
+            ),
+            "검토 우선도(점)": (
+                None
+                if item["assessment"].decision == "판단 보류"
+                else item["assessment"].priority
+            ),
             "분석 신뢰도(%)": round(item["assessment"].reliability * 100),
         }
         for rank, item in enumerate(analyzed, start=1)
@@ -557,11 +567,16 @@ def _render_results(case: dict[str, Any], analyzed: list[dict[str, Any]], max_sp
                 )
                 st.write(f"**촬영:** {observed_text} · **위치:** {location_text}")
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("단서 유사도", f"{assessment.clue_similarity * 100:.0f}%")
-                m2.metric("사진 유사도", f"{assessment.image_similarity * 100:.0f}%")
+                if assessment.decision == "판단 보류":
+                    m1.metric("단서 유사도", "판단 보류")
+                    m2.metric("사진 유사도", "확인 불가")
+                else:
+                    m1.metric("단서 유사도", f"{assessment.clue_similarity * 100:.0f}%")
+                    m2.metric("사진 유사도", f"{assessment.image_similarity * 100:.0f}%")
                 m3.metric("분석 신뢰도", f"{assessment.reliability * 100:.0f}%")
                 m4.metric("선명도", f"{item['quality'].sharpness:.1f}")
-                st.progress(assessment.priority)
+                if assessment.decision != "판단 보류":
+                    st.progress(assessment.priority)
 
             st.markdown("**일치·불일치 근거**")
             st.dataframe(
