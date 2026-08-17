@@ -651,23 +651,29 @@ def _render_route(case: dict[str, Any], confirmed_reports: list[dict[str, Any]],
         )
 
     st.dataframe(route_rows, hide_index=True, use_container_width=True)
-    plausible_reports = [
-        item
-        for item in sorted_reports
-        if item["assessment"].movement is None or item["assessment"].movement.feasible is not False
-    ]
-    latest_report = plausible_reports[-1] if plausible_reports else sorted_reports[-1]
+    # 보호자가 원본을 확인한 제보는 이동 가능성 경고만으로 자동 제외하지 않는다.
+    # 가장 늦은 확인 제보를 다음 수색의 기준 장소로 사용한다.
+    latest_report = sorted_reports[-1]
     latest_movement = latest_report["assessment"].movement
     latest_direction = latest_report.get("direction_from_origin") or "현장에서 확인한 이동 방향"
+    if latest_movement is not None and latest_movement.feasible is False:
+        st.warning(
+            f"가장 늦은 제보({report_time(latest_report):%H:%M} · {latest_report['place']})는 "
+            "이동 가능성 계산에서 재확인 대상으로 표시되었습니다. 그래도 보호자가 원본을 확인했으므로 "
+            "이 장소를 다음 수색 기준으로 사용합니다. 촬영 시각·장소·거리도 함께 다시 확인하세요."
+        )
     horizon_minutes = st.slider("마지막 목격 이후 몇 분 범위를 살펴볼까요?", 15, 120, 45, 15)
     reference_speed = (
         min(latest_movement.required_speed_kmh, max_speed_kmh)
-        if latest_movement is not None and latest_movement.required_speed_kmh is not None
+        if latest_movement is not None
+        and latest_movement.feasible is True
+        and latest_movement.required_speed_kmh is not None
         else max_speed_kmh * 0.5
     )
     search_radius_km = max(0.2, reference_speed * horizon_minutes / 60.0)
     c1, c2, c3 = st.columns(3)
     c1.metric("다음 수색 기준 장소", str(latest_report["place"]))
+    c1.caption(f"보호자가 확인한 가장 늦은 제보 · {report_time(latest_report):%H:%M}")
     c2.metric("우선 확인 방향", str(latest_direction))
     c3.metric("이동 참고 반경", f"약 {search_radius_km:.2f}km")
     st.warning(
@@ -678,23 +684,16 @@ def _render_route(case: dict[str, Any], confirmed_reports: list[dict[str, Any]],
     confirmed_with_location = [item for item in sorted_reports if item.get("point") is not None]
     if origin is not None and confirmed_with_location:
         st.markdown("**선택 좌표가 있는 제보의 지도 참고**")
-        feasible_points = [origin]
-        previous = origin
-        for item in confirmed_with_location:
-            point: LocationPoint = item["point"]
-            movement = check_movement(previous, point, max_speed_kmh)
-            if movement.feasible is True:
-                feasible_points.append(point)
-                previous = point
-
-        prediction = predict_search_area(feasible_points, horizon_minutes, max_speed_kmh)
+        confirmed_points = [origin] + [item["point"] for item in confirmed_with_location]
+        prediction = predict_search_area(confirmed_points, horizon_minutes, max_speed_kmh)
         map_points = [
             {"latitude": point.latitude, "longitude": point.longitude}
-            for point in feasible_points
+            for point in confirmed_points
         ] + [{"latitude": prediction.latitude, "longitude": prediction.longitude}]
         st.map(map_points, latitude="latitude", longitude="longitude", zoom=14, use_container_width=True)
         st.caption(
-            "지도 마지막 점은 선택 입력한 좌표를 단순 직선으로 연장한 참고 중심입니다. "
+            "보호자가 확인한 모든 좌표를 표시하며, 지도 마지막 점은 최근 두 확인 좌표를 "
+            "단순 직선으로 연장한 참고 중심입니다. "
             "지도 연결이 없는 환경에서는 위 장소 경로표를 사용하세요."
         )
     else:

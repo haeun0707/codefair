@@ -57,6 +57,26 @@ def test_manual_jpg_png_flow_runs_without_location_coordinates() -> None:
     assert any("시간순 장소 경로" in item.value for item in app.markdown)
 
 
+def test_latest_human_confirmed_report_is_used_even_with_movement_warning() -> None:
+    app = AppTest.from_file("app.py", default_timeout=30).run()
+    app.toggle[0].set_value(True).run()
+    app.button[0].click().run(timeout=30)
+
+    next(item for item in app.checkbox if item.key and item.key.endswith("A")).set_value(True).run()
+    next(item for item in app.checkbox if item.key and item.key.endswith("C")).set_value(True).run()
+
+    assert not app.exception
+    assert any(
+        "시청 앞 잔디광장 → 공원 동쪽 입구 → 외곽 체육공원" in item.value
+        for item in app.markdown
+    )
+    assert any(
+        metric.label == "다음 수색 기준 장소" and metric.value == "외곽 체육공원"
+        for metric in app.metric
+    )
+    assert any("보호자가 원본을 확인했으므로" in item.value for item in app.warning)
+
+
 def test_registration_and_report_traits_allow_custom_text() -> None:
     app = AppTest.from_file("app.py", default_timeout=30).run()
 
